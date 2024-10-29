@@ -100,6 +100,33 @@ describe('Blog app', () => {
       await expect(likes).toContainText(`${(blog.likes + 1).toString()}  like`, {timeout: 20000})
 
     })
+
+    test.only('a blog can be deleted by owner', async ({page}) => {
+      const blog = {
+        title: "The Inevitable Death",
+        url: "http://www.death.com",
+        likes: 5,
+        author: "Death"
+    }
+
+      page.on('dialog', async dialog => {
+        await dialog.accept()
+      })
+
+      await createBlog(page, blog)
+      const showButton = page.getByRole('button', {name: 'show'})
+      await showButton.click()
+
+      const removeButton = page.getByRole('button', {name: 'remove'})
+      await expect(removeButton).toBeVisible()
+      await removeButton.click()
+
+      await expect(showButton).not.toBeVisible()
+      await expect(page.getByRole('button', {name: 'hide'})).not.toBeVisible()
+      await expect(page.getByText(blog.title)).not.toBeVisible()
+      await expect(page.getByText(blog.url)).not.toBeVisible()
+
+    })
   })
 })
 
