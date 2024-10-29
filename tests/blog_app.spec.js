@@ -1,5 +1,6 @@
 const { test, expect, beforeEach, describe } = require('@playwright/test')
-const exp = require('constants')
+const {login, createBlog} = require('./utils')
+const { timeout } = require('../playwright.config')
 
 describe('Blog app', () => {
   beforeEach(async ({ page, request }) => {
@@ -20,8 +21,8 @@ describe('Blog app', () => {
     const blogTitleElement = page.getByText('Blog')
     await expect(blogTitleElement).toBeVisible()
 
-    const usernameInput = page.getByRole('textbox', {name: 'username'})
-    const passwordInput = page.getByRole('textbox', {name: 'password'})
+    const usernameInput = page.getByRole('textbox', {name: 'Username'})
+    const passwordInput = page.getByRole('textbox', {name: 'Password'})
 
     await expect(usernameInput).toBeVisible()
     await expect(passwordInput).toBeVisible()
@@ -29,14 +30,7 @@ describe('Blog app', () => {
 
   describe('Login', () => {
     test('succeeds with correct credentials', async ({ page }) => {
-      const usernameInput = page.getByRole('textbox', {name: 'username'})
-      const passwordInput = page.getByRole('textbox', {name: 'password'})
-
-      await usernameInput.fill('mr-david')
-      await passwordInput.fill('secretPassword')
-
-      const loginButton = page.getByRole('button')
-      await loginButton.click()
+      await login(page, 'mr-david', 'secretPassword')
 
       const newBlogButton = page.locator('.new-blog')
       await expect(newBlogButton).toContainText('Click to add a new blog')
@@ -45,20 +39,13 @@ describe('Blog app', () => {
       const user = page.getByText('David Malan logged in')
       await expect(user).toBeVisible()
 
-      await expect(usernameInput).not.toBeVisible()
-      await expect(passwordInput).not.toBeVisible()
+      await expect(page.getByRole('textbox', {name: 'Username'})).not.toBeVisible()
+      await expect(page.getByRole('textbox', {name: 'Password'})).not.toBeVisible()
     })
 
     test('fails with wrong credentials', async ({ page }) => {
-        const usernameInput = page.getByRole('textbox', {name: 'username'})
-        const passwordInput = page.getByRole('textbox', {name: 'password'})
-  
-        await usernameInput.fill('mr-david')
-        await passwordInput.fill('wrongSecretPassword')
-  
-        const loginButton = page.getByRole('button')
-        await loginButton.click()
-  
+        await login(page, 'mr-david', 'wrongSecretPassword')
+
         const newBlogButton = page.getByText('Click to add a new blog')
         await expect(newBlogButton).not.toBeVisible()
 
@@ -68,50 +55,49 @@ describe('Blog app', () => {
         const errorMessage = page.getByText('Username or Password is incorrect')
         await expect(errorMessage).toBeVisible()
 
-        await expect(usernameInput).toBeVisible()
-        await expect(passwordInput).toBeVisible()    
+        await expect(page.getByRole('textbox', {name: 'Username'})).toBeVisible()
+        await expect(page.getByRole('textbox', {name: 'Password'})).toBeVisible()    
     })
   })
 
   describe('When logged in', () => {
     beforeEach(async ({ page }) => {
-      const usernameInput = page.getByRole('textbox', {name: 'username'})
-      const passwordInput = page.getByRole('textbox', {name: 'password'})
+      await login(page, 'mr-david', 'secretPassword')
 
-      await usernameInput.fill('mr-david')
-      await passwordInput.fill('secretPassword')
-
-      const loginButton = page.getByRole('button')
-      await loginButton.click()
-      const newBlogButton = page.locator('.new-blog')
-      await newBlogButton.click()
     })
   
-    test.only('a new blog can be created', async ({ page }) => {
+    test('a new blog can be created', async ({ page }) => {
       const blog = {
         title: "The Inevitable Death",
         url: "http://www.death.com",
         likes: 5,
         author: "Death"
     }
-      const blogTitle = page.getByPlaceholder('Blog Title')
-      const blogAuthor = page.getByPlaceholder('Blog Author')
-      const blogURL = page.getByPlaceholder('Blog URL')
-      const blogLikes = page.getByPlaceholder('Blog Likes')
-      
-      await blogTitle.fill(blog.title)
-      await blogAuthor.fill(blog.author)
-      await blogURL.fill(blog.url)
-      await blogLikes.fill(blog.likes.toString())
-
-      const newBlogSubmit = page.locator('.newBlogSubmit')
-      await newBlogSubmit.click()
+      await createBlog(page, blog)
 
       const showButton = page.getByRole('button', {name: 'show'})
       await expect(showButton).toBeVisible({timeout: 20000})
 
       const title = page.locator('.blogTitle')
       await expect(title).toBeVisible()
+
+    })
+
+    test('a blog can be liked', async ({page}) => {
+      const blog = {
+        title: "The Inevitable Death",
+        url: "http://www.death.com",
+        likes: 5,
+        author: "Death"
+    }
+
+      await createBlog(page, blog)
+      await page.getByRole('button', {name: 'show'}).click()
+
+      await page.getByRole('button', {name: 'like'}).click()
+
+      const likes = page.locator('.blogLikes')
+      await expect(likes).toContainText(`${(blog.likes + 1).toString()}  like`, {timeout: 20000})
 
     })
   })
