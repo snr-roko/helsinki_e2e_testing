@@ -1,6 +1,7 @@
 const { test, expect, beforeEach, describe } = require('@playwright/test')
 const {login, createBlog} = require('./utils')
-const { timeout } = require('../playwright.config')
+const { timeout, name } = require('../playwright.config')
+const { log } = require('console')
 
 describe('Blog app', () => {
   beforeEach(async ({ page, request }) => {
@@ -101,7 +102,7 @@ describe('Blog app', () => {
 
     })
 
-    test.only('a blog can be deleted by owner', async ({page}) => {
+    test('a blog can be deleted by owner', async ({page}) => {
       const blog = {
         title: "The Inevitable Death",
         url: "http://www.death.com",
@@ -125,6 +126,36 @@ describe('Blog app', () => {
       await expect(page.getByRole('button', {name: 'hide'})).not.toBeVisible()
       await expect(page.getByText(blog.title)).not.toBeVisible()
       await expect(page.getByText(blog.url)).not.toBeVisible()
+
+    })
+
+    test.only('a blog can not deleted by another user aside owner', async ({page, request}) => {
+      const blog = {
+        title: "The Inevitable Death",
+        url: "http://www.death.com",
+        likes: 5,
+        author: "Death"
+    }
+
+    const newUser = {
+      data: {
+          name: 'Mluukai',
+          username: 'mluukai',
+          password: 'secretPassword'
+      }
+  }
+      
+      await createBlog(page, blog)
+
+      await page.getByRole('button', {name: 'Log Out'}).click()
+
+      await request.post('http://localhost:3003/api/users/', newUser)
+
+      await login(page, 'mluukai', 'secretPassword')
+
+      const showButton = page.getByRole('button', {name: 'show'})
+      await showButton.click()
+      await expect(page.getByRole('button', {name: 'remove'})).not.toBeVisible()
 
     })
   })
