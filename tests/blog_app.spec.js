@@ -72,5 +72,48 @@ describe('Blog app', () => {
         await expect(passwordInput).toBeVisible()    
     })
   })
+
+  describe('When logged in', () => {
+    beforeEach(async ({ page }) => {
+      const usernameInput = page.getByRole('textbox', {name: 'username'})
+      const passwordInput = page.getByRole('textbox', {name: 'password'})
+
+      await usernameInput.fill('mr-david')
+      await passwordInput.fill('secretPassword')
+
+      const loginButton = page.getByRole('button')
+      await loginButton.click()
+      const newBlogButton = page.locator('.new-blog')
+      await newBlogButton.click()
+    })
+  
+    test.only('a new blog can be created', async ({ page }) => {
+      const blog = {
+        title: "The Inevitable Death",
+        url: "http://www.death.com",
+        likes: 5,
+        author: "Death"
+    }
+      const blogTitle = page.getByPlaceholder('Blog Title')
+      const blogAuthor = page.getByPlaceholder('Blog Author')
+      const blogURL = page.getByPlaceholder('Blog URL')
+      const blogLikes = page.getByPlaceholder('Blog Likes')
+      
+      await blogTitle.fill(blog.title)
+      await blogAuthor.fill(blog.author)
+      await blogURL.fill(blog.url)
+      await blogLikes.fill(blog.likes.toString())
+
+      const newBlogSubmit = page.locator('.newBlogSubmit')
+      await newBlogSubmit.click()
+
+      const showButton = page.getByRole('button', {name: 'show'})
+      await expect(showButton).toBeVisible({timeout: 20000})
+
+      const title = page.locator('.blogTitle')
+      await expect(title).toBeVisible()
+
+    })
+  })
 })
 
