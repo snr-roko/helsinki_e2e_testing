@@ -27,4 +27,9 @@ const createBlog = async (page, blog) => {
     await newBlogSubmit.click()
 }
 
-module.exports = {login, createBlog}
+const checkLikes = async (blogContainer, blogLikes) => {
+    const likes = blogContainer.locator('.blogLikes')
+    await expect(likes).toContainText(`${(blogLikes).toString()} like`)
+}
+
+module.exports = {login, createBlog, checkLikes}

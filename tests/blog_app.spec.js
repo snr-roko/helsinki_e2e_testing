@@ -1,10 +1,9 @@
 const { test, expect, beforeEach, describe } = require('@playwright/test')
-const {login, createBlog} = require('./utils')
-const { timeout, name } = require('../playwright.config')
-const { log } = require('console')
+const {login, createBlog, checkLikes} = require('./utils')
 
 describe('Blog app', () => {
   beforeEach(async ({ page, request }) => {
+    test.setTimeout(60000)
     await request.post('http://localhost:3003/api/reset-tests/')
 
     const newUser = {
@@ -77,7 +76,7 @@ describe('Blog app', () => {
       await createBlog(page, blog)
 
       const showButton = page.getByRole('button', {name: 'show'})
-      await expect(showButton).toBeVisible({timeout: 20000})
+      await expect(showButton).toBeVisible()
 
       const title = page.locator('.blogTitle')
       await expect(title).toBeVisible()
@@ -129,7 +128,7 @@ describe('Blog app', () => {
 
     })
 
-    test.only('a blog can not deleted by another user aside owner', async ({page, request}) => {
+    test('a blog can not deleted by another user aside owner', async ({page, request}) => {
       const blog = {
         title: "The Inevitable Death",
         url: "http://www.death.com",
@@ -137,19 +136,20 @@ describe('Blog app', () => {
         author: "Death"
     }
 
-    const newUser = {
-      data: {
+      const newUser = {
+        data: {
           name: 'Mluukai',
           username: 'mluukai',
           password: 'secretPassword'
       }
   }
+
+      await request.post('http://localhost:3003/api/users/', newUser)
+
       
       await createBlog(page, blog)
 
       await page.getByRole('button', {name: 'Log Out'}).click()
-
-      await request.post('http://localhost:3003/api/users/', newUser)
 
       await login(page, 'mluukai', 'secretPassword')
 
@@ -157,6 +157,59 @@ describe('Blog app', () => {
       await showButton.click()
       await expect(page.getByRole('button', {name: 'remove'})).not.toBeVisible()
 
+    })
+
+    test.only('blogs sort when listed', async ({page}) => {
+      const blogs = [{
+        title: "The Inevitable Death",
+        url: "http://www.death.com",
+        likes: 20,
+        author: "Death"
+    },
+      {
+        title: "The Inevitable Death",
+        url: "http://www.death.com",
+        likes: 35,
+        author: "Death"
+    },
+      {
+        title: "The Inevitable Death",
+        url: "http://www.death.com",
+        likes: 15,
+        author: "Death"
+    },
+      {
+        title: "The Inevitable Death",
+        url: "http://www.death.com",
+        likes: 5,
+        author: "Death"
+    },
+      {
+        title: "The Inevitable Death",
+        url: "http://www.death.com",
+        likes: 55,
+        author: "Death"
+    }
+  ]
+
+  const blogLikes = blogs.map(blog => blog.likes).sort((a, b) => b - a)
+
+      for (const blog of blogs) {
+        await createBlog(page, blog)
+      } 
+
+      const showButtons = await page.getByRole('button', {name: 'show'}).all()
+      for (const showButton of showButtons) {
+        await showButton.click()
+      }
+
+      const blogContainers = await page.locator('.blogContainer').all()
+
+
+      for (let i=0; i < blogContainers.length; i ++) {
+        await checkLikes(blogContainers[0], blogLikes[0])
+      }
+      
     })
   })
 })
